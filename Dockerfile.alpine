@@ -1,0 +1,40 @@
+# Alpine-based Python 3.12 - Maximum Security
+# Significantly fewer vulnerabilities due to minimal packages
+# Trade-off: musl libc instead of glibc (may affect some apps)
+
+FROM python:3.12-alpine
+
+# Install only essential packages
+RUN apk add --no-cache \
+    ca-certificates \
+    curl \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -S appuser && adduser -S -G appuser appuser
+
+# Set Python environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONFAULTHANDLER=1 \
+    PYTHONHASHSEED=random \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# Install Python dependencies (if requirements.txt exists)
+# COPY requirements.txt .
+# RUN if [ -f requirements.txt ]; then pip install --no-cache-dir -r requirements.txt; fi
+
+# Copy application (optional - uncomment when ready)
+# COPY --chown=appuser:appuser . .
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["python", "-u", "app.py"]
